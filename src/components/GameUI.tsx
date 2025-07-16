@@ -162,9 +162,10 @@ export const GameUI = ({ gameState, onMove, onFish }: GameUIProps) => {
             </CardHeader>
             <CardContent>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>WASD o flechas: Mover</p>
+                <p>A/D o ←/→: Girar</p>
+                <p>W/S o ↑/↓: Avanzar/Retroceder</p>
                 <p>Espacio: Pescar</p>
-                <p>Encuentra diferentes tipos de peces</p>
+                <p>Vista en primera persona</p>
               </div>
             </CardContent>
           </Card>

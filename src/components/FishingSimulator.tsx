@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Ocean } from "./Ocean";
-import { Boat } from "./Boat";
+import { FirstPersonOcean } from "./FirstPersonOcean";
+import { FirstPersonFishing } from "./FirstPersonFishing";
 import { GameUI } from "./GameUI";
-import { FishingMechanics } from "./FishingMechanics";
 
 export interface Position {
   x: number;
@@ -18,7 +17,7 @@ export interface Fish {
 }
 
 export interface GameState {
-  position: Position;
+  rotation: number; // Changed from position to rotation
   inventory: Fish[];
   score: number;
   isFishing: boolean;
@@ -28,7 +27,7 @@ export interface GameState {
 
 export const FishingSimulator = () => {
   const [gameState, setGameState] = useState<GameState>({
-    position: { x: 400, y: 300 },
+    rotation: 0, // Start facing forward
     inventory: [],
     score: 0,
     isFishing: false,
@@ -40,28 +39,28 @@ export const FishingSimulator = () => {
     if (gameState.isFishing || gameState.fuel <= 0) return;
 
     setGameState(prev => {
-      const newPosition = { ...prev.position };
-      const moveDistance = 20;
+      let newRotation = prev.rotation;
+      const rotationSpeed = 10;
       
       switch (direction) {
-        case 'up':
-          newPosition.y = Math.max(50, newPosition.y - moveDistance);
-          break;
-        case 'down':
-          newPosition.y = Math.min(550, newPosition.y + moveDistance);
-          break;
         case 'left':
-          newPosition.x = Math.max(50, newPosition.x - moveDistance);
+          newRotation = Math.max(-45, newRotation - rotationSpeed);
           break;
         case 'right':
-          newPosition.x = Math.min(750, newPosition.x + moveDistance);
+          newRotation = Math.min(45, newRotation + rotationSpeed);
+          break;
+        case 'up':
+          // Move forward (no rotation change, just visual effect)
+          break;
+        case 'down':
+          // Move backward (no rotation change, just visual effect)
           break;
       }
 
       return {
         ...prev,
-        position: newPosition,
-        fuel: Math.max(0, prev.fuel - 1),
+        rotation: newRotation,
+        fuel: Math.max(0, prev.fuel - 0.5),
         isMoving: true
       };
     });
@@ -159,15 +158,13 @@ export const FishingSimulator = () => {
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-gradient-ocean">
-      <Ocean />
-      <Boat 
-        position={gameState.position} 
+      <FirstPersonOcean 
+        rotation={gameState.rotation}
         isMoving={gameState.isMoving}
-        isFishing={gameState.isFishing}
       />
-      <FishingMechanics 
+      <FirstPersonFishing 
         isFishing={gameState.isFishing}
-        position={gameState.position}
+        rotation={gameState.rotation}
       />
       <GameUI
         gameState={gameState}
