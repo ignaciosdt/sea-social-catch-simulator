@@ -57,10 +57,6 @@ export const Ocean = () => {
       {/* Ocean gradient overlay */}
       <div className="absolute inset-0 bg-gradient-ocean opacity-80" />
       
-      {/* Animated waves */}
-      {waves.map((wave, index) => (
-        <Wave key={index} {...wave} />
-      ))}
       
       {/* Ocean grid pattern */}
       <div className="absolute inset-0 opacity-10">
@@ -73,14 +69,6 @@ export const Ocean = () => {
         }} />
       </div>
 
-      {/* Floating debris */}
-      <div className="absolute top-20 left-20 w-3 h-3 bg-boat-wood rounded-full opacity-60 animate-wave" />
-      <div className="absolute top-40 right-32 w-2 h-2 bg-boat-wood rounded-full opacity-40 animate-wave" style={{ animationDelay: '1s' }} />
-      <div className="absolute bottom-32 left-1/3 w-4 h-4 bg-boat-wood rounded-full opacity-50 animate-wave" style={{ animationDelay: '2s' }} />
-      
-      {/* Distant islands */}
-      <div className="absolute top-10 right-10 w-16 h-8 bg-accent rounded-full opacity-30" />
-      <div className="absolute bottom-20 left-10 w-12 h-6 bg-accent rounded-full opacity-20" />
     </div>
   );
 };
