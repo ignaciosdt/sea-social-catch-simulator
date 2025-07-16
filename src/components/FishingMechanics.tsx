@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Position } from "./FishingSimulator";
 
 interface FishingMechanicsProps {
@@ -6,6 +7,29 @@ interface FishingMechanicsProps {
 }
 
 export const FishingMechanics = ({ isFishing, position }: FishingMechanicsProps) => {
+  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
+
+  useEffect(() => {
+    if (isFishing) {
+      // Create ripples when fishing
+      const interval = setInterval(() => {
+        const newRipple = {
+          id: Date.now(),
+          x: position.x + (Math.random() - 0.5) * 40,
+          y: position.y + 20 + (Math.random() - 0.5) * 20,
+        };
+        
+        setRipples(prev => [...prev, newRipple]);
+        
+        // Remove ripple after animation
+        setTimeout(() => {
+          setRipples(prev => prev.filter(r => r.id !== newRipple.id));
+        }, 1000);
+      }, 300);
+
+      return () => clearInterval(interval);
+    }
+  }, [isFishing, position]);
 
   if (!isFishing) return null;
 
@@ -20,6 +44,18 @@ export const FishingMechanics = ({ isFishing, position }: FishingMechanicsProps)
         }}
       />
       
+      {/* Ripples */}
+      {ripples.map((ripple) => (
+        <div
+          key={ripple.id}
+          className="absolute w-4 h-4 border-2 border-ocean-foam rounded-full animate-ripple"
+          style={{
+            left: `${ripple.x}px`,
+            top: `${ripple.y}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      ))}
       
       {/* Fishing indicator */}
       <div
