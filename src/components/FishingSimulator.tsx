@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { FirstPersonOcean } from "./FirstPersonOcean";
 import { FirstPersonFishing } from "./FirstPersonFishing";
@@ -6,6 +7,7 @@ import { GameUI } from "./GameUI";
 export interface Position {
   x: number;
   y: number;
+  z: number;
 }
 
 export interface Fish {
@@ -17,50 +19,77 @@ export interface Fish {
 }
 
 export interface GameState {
-  rotation: number; // Changed from position to rotation
+  rotation: number;
+  position: Position;
   inventory: Fish[];
   score: number;
   isFishing: boolean;
   fuel: number;
   isMoving: boolean;
+  depth: number;
 }
 
 export const FishingSimulator = () => {
   const [gameState, setGameState] = useState<GameState>({
-    rotation: 0, // Start facing forward
+    rotation: 0,
+    position: { x: 0, y: 0, z: 0 },
     inventory: [],
     score: 0,
     isFishing: false,
     fuel: 100,
-    isMoving: false
+    isMoving: false,
+    depth: 0
   });
 
-  const handleMove = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
+  const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
+
+  const handleMove = useCallback((direction: 'up' | 'down' | 'left' | 'right' | 'dive' | 'surface') => {
     if (gameState.isFishing || gameState.fuel <= 0) return;
 
     setGameState(prev => {
       let newRotation = prev.rotation;
-      const rotationSpeed = 10;
+      let newPosition = { ...prev.position };
+      let newDepth = prev.depth;
+      const moveSpeed = 5;
+      const rotationSpeed = 8;
       
       switch (direction) {
         case 'left':
-          newRotation = Math.max(-45, newRotation - rotationSpeed);
+          newRotation = Math.max(-60, newRotation - rotationSpeed);
           break;
         case 'right':
-          newRotation = Math.min(45, newRotation + rotationSpeed);
+          newRotation = Math.min(60, newRotation + rotationSpeed);
           break;
         case 'up':
-          // Move forward (no rotation change, just visual effect)
+          // Move forward based on current rotation
+          const forwardX = Math.sin(newRotation * Math.PI / 180) * moveSpeed;
+          const forwardY = Math.cos(newRotation * Math.PI / 180) * moveSpeed;
+          newPosition.x += forwardX;
+          newPosition.y -= forwardY;
           break;
         case 'down':
-          // Move backward (no rotation change, just visual effect)
+          // Move backward
+          const backwardX = Math.sin(newRotation * Math.PI / 180) * moveSpeed;
+          const backwardY = Math.cos(newRotation * Math.PI / 180) * moveSpeed;
+          newPosition.x -= backwardX;
+          newPosition.y += backwardY;
+          break;
+        case 'dive':
+          newDepth = Math.min(100, newDepth + moveSpeed);
+          newPosition.z = newDepth;
+          break;
+        case 'surface':
+          newDepth = Math.max(0, newDepth - moveSpeed);
+          newPosition.z = newDepth;
           break;
       }
 
       return {
         ...prev,
         rotation: newRotation,
-        fuel: Math.max(0, prev.fuel - 0.5),
+        position: newPosition,
+        depth: newDepth,
+        fuel: Math.max(0, prev.fuel - 0.3),
         isMoving: true
       };
     });
@@ -68,7 +97,7 @@ export const FishingSimulator = () => {
     // Reset moving state after animation
     setTimeout(() => {
       setGameState(prev => ({ ...prev, isMoving: false }));
-    }, 300);
+    }, 200);
   }, [gameState.isFishing, gameState.fuel]);
 
   const handleFish = useCallback(() => {
@@ -76,26 +105,33 @@ export const FishingSimulator = () => {
 
     setGameState(prev => ({ ...prev, isFishing: true }));
 
-    // Simulate fishing time
+    // Simulate fishing time based on depth
+    const fishingTime = 1500 + gameState.depth * 10;
+    
     setTimeout(() => {
       const fishTypes: Fish[] = [
         { id: '1', name: 'Sardina', rarity: 'common', points: 10, icon: '🐟' },
         { id: '2', name: 'Atún', rarity: 'rare', points: 25, icon: '🐠' },
         { id: '3', name: 'Pez Espada', rarity: 'epic', points: 50, icon: '🗡️' },
-        { id: '4', name: 'Tiburón Dorado', rarity: 'legendary', points: 100, icon: '🦈' }
+        { id: '4', name: 'Tiburón Dorado', rarity: 'legendary', points: 100, icon: '🦈' },
+        { id: '5', name: 'Pez Abisal', rarity: 'legendary', points: 150, icon: '🐙' }
       ];
 
-      // Random chance to catch fish
-      const catchChance = Math.random();
-      if (catchChance > 0.3) {
-        const rarityRoll = Math.random();
+      // Better catch chances at different depths
+      const depthBonus = gameState.depth * 0.01;
+      const catchChance = 0.4 + depthBonus;
+      
+      if (Math.random() < catchChance) {
+        const rarityRoll = Math.random() + depthBonus;
         let caughtFish: Fish;
         
-        if (rarityRoll < 0.5) {
+        if (gameState.depth > 50 && rarityRoll > 0.9) {
+          caughtFish = fishTypes[4]; // Deep sea fish
+        } else if (rarityRoll < 0.4) {
           caughtFish = fishTypes[0]; // Common
-        } else if (rarityRoll < 0.8) {
+        } else if (rarityRoll < 0.7) {
           caughtFish = fishTypes[1]; // Rare
-        } else if (rarityRoll < 0.95) {
+        } else if (rarityRoll < 0.9) {
           caughtFish = fishTypes[2]; // Epic
         } else {
           caughtFish = fishTypes[3]; // Legendary
@@ -110,46 +146,54 @@ export const FishingSimulator = () => {
       } else {
         setGameState(prev => ({ ...prev, isFishing: false }));
       }
-    }, 2000);
-  }, [gameState.isFishing]);
+    }, fishingTime);
+  }, [gameState.isFishing, gameState.depth]);
 
-  // Handle keyboard controls
+  // Handle continuous movement with WASD
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      switch (e.key.toLowerCase()) {
-        case 'w':
-        case 'arrowup':
-          handleMove('up');
-          break;
-        case 's':
-        case 'arrowdown':
-          handleMove('down');
-          break;
-        case 'a':
-        case 'arrowleft':
-          handleMove('left');
-          break;
-        case 'd':
-        case 'arrowright':
-          handleMove('right');
-          break;
-        case ' ':
-          e.preventDefault();
-          handleFish();
-          break;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: true }));
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      setKeys(prev => ({ ...prev, [e.key.toLowerCase()]: false }));
+      
+      // Handle fishing on space release
+      if (e.key === ' ') {
+        e.preventDefault();
+        handleFish();
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleMove, handleFish]);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [handleFish]);
+
+  // Continuous movement based on held keys
+  useEffect(() => {
+    const moveInterval = setInterval(() => {
+      if (keys['w'] || keys['arrowup']) handleMove('up');
+      if (keys['s'] || keys['arrowdown']) handleMove('down');
+      if (keys['a'] || keys['arrowleft']) handleMove('left');
+      if (keys['d'] || keys['arrowright']) handleMove('right');
+      if (keys['q']) handleMove('dive');
+      if (keys['e']) handleMove('surface');
+    }, 50);
+
+    return () => clearInterval(moveInterval);
+  }, [keys, handleMove]);
 
   // Refuel over time
   useEffect(() => {
     const fuelInterval = setInterval(() => {
       setGameState(prev => ({
         ...prev,
-        fuel: Math.min(100, prev.fuel + 0.5)
+        fuel: Math.min(100, prev.fuel + 0.3)
       }));
     }, 1000);
 
@@ -160,6 +204,7 @@ export const FishingSimulator = () => {
     <div className="relative w-full h-screen overflow-hidden bg-gradient-ocean">
       <FirstPersonOcean 
         rotation={gameState.rotation}
+        position={gameState.position}
         isMoving={gameState.isMoving}
       />
       <FirstPersonFishing 

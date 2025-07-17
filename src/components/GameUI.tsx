@@ -1,13 +1,14 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { GameState } from "./FishingSimulator";
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Anchor, Trophy, Package, Fuel } from "lucide-react";
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Anchor, Trophy, Package, Fuel, Waves } from "lucide-react";
 
 interface GameUIProps {
   gameState: GameState;
-  onMove: (direction: 'up' | 'down' | 'left' | 'right') => void;
+  onMove: (direction: 'up' | 'down' | 'left' | 'right' | 'dive' | 'surface') => void;
   onFish: () => void;
 }
 
@@ -32,6 +33,13 @@ export const GameUI = ({ gameState, onMove, onFish }: GameUIProps) => {
     }
   };
 
+  const getDepthColor = () => {
+    if (gameState.depth < 25) return 'text-primary';
+    if (gameState.depth < 50) return 'text-accent';
+    if (gameState.depth < 75) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
   return (
     <div className="absolute inset-0 pointer-events-none">
       {/* Top UI Panel */}
@@ -51,6 +59,13 @@ export const GameUI = ({ gameState, onMove, onFish }: GameUIProps) => {
                 <span className="text-sm">Combustible:</span>
                 <Progress value={gameState.fuel} className="w-20" />
                 <span className="text-sm">{Math.round(gameState.fuel)}%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Waves className="w-4 h-4 text-ocean-surface" />
+                <span className="text-sm">Profundidad:</span>
+                <span className={`text-sm font-medium ${getDepthColor()}`}>
+                  {Math.round(gameState.depth)}m
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-accent" />
@@ -136,6 +151,26 @@ export const GameUI = ({ gameState, onMove, onFish }: GameUIProps) => {
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
+              <div className="flex gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onMove('surface')}
+                  disabled={gameState.isFishing || gameState.fuel <= 0 || gameState.depth <= 0}
+                  className="p-2 text-xs"
+                >
+                  ↑ Subir
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onMove('dive')}
+                  disabled={gameState.isFishing || gameState.fuel <= 0}
+                  className="p-2 text-xs"
+                >
+                  ↓ Bucear
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -158,14 +193,15 @@ export const GameUI = ({ gameState, onMove, onFish }: GameUIProps) => {
           {/* Instructions */}
           <Card className="bg-card/90 backdrop-blur-sm shadow-ui">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Instrucciones</CardTitle>
+              <CardTitle className="text-sm">Controles</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>A/D o ←/→: Girar</p>
-                <p>W/S o ↑/↓: Avanzar/Retroceder</p>
+                <p>WASD o flechas: Mover</p>
+                <p>Q: Bucear más profundo</p>
+                <p>E: Subir a superficie</p>
                 <p>Espacio: Pescar</p>
-                <p>Vista en primera persona</p>
+                <p>Mayor profundidad = mejores peces</p>
               </div>
             </CardContent>
           </Card>
