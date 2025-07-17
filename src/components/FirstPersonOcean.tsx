@@ -51,24 +51,46 @@ export const FirstPersonOcean = ({ rotation, position, isMoving }: FirstPersonOc
     return () => clearInterval(interval);
   }, []);
 
-  const depthEffect = Math.min(position.z * 0.1, 1);
+  const depthEffect = Math.min(position.z * 0.01, 1);
+  const time = Date.now() * 0.001;
+  const boatSway = Math.sin(time * 0.8) * 0.3 + Math.cos(time * 0.6) * 0.2;
 
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Ocean background with depth and movement */}
+      {/* Infinite ocean background */}
       <div 
-        className={`absolute inset-0 bg-cover bg-center transition-all duration-500 ${
-          isMoving ? 'scale-110' : 'scale-100'
-        }`}
+        className="absolute inset-0 bg-cover bg-center transition-all duration-200"
         style={{
           backgroundImage: `url(${oceanBackground})`,
           transform: `
-            translateX(${position.x * -0.5}px) 
-            translateY(${position.y * -0.3}px) 
-            rotate(${rotation * 0.1}deg) 
-            scale(${isMoving ? 1.1 : 1})
+            translateX(${position.x * -0.8}px) 
+            translateY(${position.y * -0.8}px) 
+            rotate(${rotation * 0.3}deg) 
+            scale(${1.2 + depthEffect * 0.2})
           `,
-          filter: `blur(${depthEffect * 2}px) brightness(${1 - depthEffect * 0.3})`,
+          filter: `blur(${depthEffect * 3}px) brightness(${1 - depthEffect * 0.5})`,
+        }}
+      />
+      
+      {/* Infinite tiled ocean pattern */}
+      <div 
+        className="absolute inset-0 opacity-30"
+        style={{
+          background: `
+            repeating-linear-gradient(
+              ${rotation + 45}deg,
+              transparent 0px,
+              hsl(var(--ocean-surface) / 0.1) 100px,
+              transparent 200px
+            ),
+            repeating-linear-gradient(
+              ${rotation - 45}deg,
+              transparent 0px,
+              hsl(var(--ocean-surface) / 0.1) 150px,
+              transparent 300px
+            )
+          `,
+          transform: `translateX(${position.x * -0.3}px) translateY(${position.y * -0.3}px)`,
         }}
       />
       
@@ -78,80 +100,94 @@ export const FirstPersonOcean = ({ rotation, position, isMoving }: FirstPersonOc
         style={{
           background: `linear-gradient(
             to bottom,
-            hsl(var(--ocean-surface) / ${0.2 + depthEffect * 0.3}) 0%,
-            hsl(var(--ocean-surface) / ${0.4 + depthEffect * 0.4}) 30%,
-            hsl(var(--ocean-deep) / ${0.6 + depthEffect * 0.3}) 70%,
-            hsl(var(--ocean-deep) / ${0.8 + depthEffect * 0.2}) 100%
+            hsl(var(--ocean-surface) / ${0.1 + depthEffect * 0.2}) 0%,
+            hsl(var(--ocean-surface) / ${0.3 + depthEffect * 0.3}) 40%,
+            hsl(var(--ocean-deep) / ${0.4 + depthEffect * 0.4}) 70%,
+            hsl(var(--ocean-deep) / ${0.6 + depthEffect * 0.4}) 100%
           )`
         }}
       />
       
       {/* Horizon line that moves with rotation */}
       <div 
-        className="absolute w-full h-px bg-ocean-foam/30 transition-all duration-300"
+        className="absolute w-full h-px bg-ocean-foam/20 transition-all duration-200"
         style={{
-          top: `${35 + position.y * 0.1}%`,
-          transform: `rotate(${rotation * 0.2}deg)`,
-          opacity: Math.max(0.1, 1 - depthEffect),
+          top: `${40 + position.y * 0.05 + boatSway}%`,
+          transform: `rotate(${rotation * 0.8}deg)`,
+          opacity: Math.max(0.1, 1 - depthEffect * 2),
         }}
       />
       
-      {/* Flowing water particles (no circles) */}
+      {/* Flowing water particles */}
       {waterParticles.map((particle) => (
         <div
           key={particle.id}
           className="absolute bg-ocean-foam transition-all duration-100"
           style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
+            left: `${(particle.x + position.x * 0.1) % 100}%`,
+            top: `${particle.y + boatSway * 0.5}%`,
             width: `${particle.size}px`,
             height: `1px`,
-            opacity: particle.opacity * (1 - depthEffect * 0.5),
-            transform: `rotate(${rotation * 0.1 + particle.id * 10}deg)`,
+            opacity: particle.opacity * (1 - depthEffect * 0.7),
+            transform: `rotate(${rotation * 0.2 + particle.id * 15}deg)`,
           }}
         />
       ))}
       
-      {/* Water surface texture */}
+      {/* Water surface texture with boat wake effect */}
       <div className="absolute bottom-0 left-0 right-0 h-3/4 overflow-hidden">
         <div 
-          className="w-full h-full opacity-20 transition-all duration-500"
+          className="w-full h-full opacity-15 transition-all duration-200"
           style={{
             background: `
               linear-gradient(
-                ${90 + rotation * 0.5}deg, 
+                ${90 + rotation * 0.7}deg, 
                 transparent 0%, 
-                hsl(var(--ocean-foam) / 0.1) 20%, 
-                transparent 40%,
-                hsl(var(--ocean-foam) / 0.1) 60%,
-                transparent 80%
+                hsl(var(--ocean-foam) / 0.2) 15%, 
+                transparent 30%,
+                hsl(var(--ocean-foam) / 0.15) 50%,
+                transparent 70%,
+                hsl(var(--ocean-foam) / 0.1) 85%,
+                transparent 100%
               )
             `,
-            transform: `translateX(${position.x * -0.2}px) translateY(${position.y * -0.1}px)`,
+            transform: `translateX(${position.x * -0.4}px) translateY(${position.y * -0.2 + boatSway * 10}px)`,
           }}
         />
       </div>
       
       {/* Underwater effect when deep */}
-      {depthEffect > 0.5 && (
+      {depthEffect > 0.1 && (
         <div 
           className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
           style={{
             background: `radial-gradient(
               ellipse at center,
-              transparent 20%,
-              hsl(var(--ocean-deep) / 0.3) 60%,
-              hsl(var(--ocean-deep) / 0.6) 100%
+              transparent 30%,
+              hsl(var(--ocean-deep) / ${0.2 + depthEffect * 0.3}) 60%,
+              hsl(var(--ocean-deep) / ${0.4 + depthEffect * 0.4}) 100%
             )`,
-            opacity: (depthEffect - 0.5) * 2,
+            opacity: depthEffect * 3,
           }}
         />
       )}
       
-      {/* Boat edge (first person view) */}
-      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-boat-wood/40 to-transparent">
+      {/* Boat edge (first person view with sway) */}
+      <div 
+        className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-boat-wood/50 to-transparent"
+        style={{
+          transform: `rotate(${rotation * 0.1 + boatSway * 0.5}deg)`,
+        }}
+      >
         <div 
-          className="absolute bottom-0 left-0 right-0 h-3 bg-boat-wood/60 transition-all duration-300"
+          className="absolute bottom-0 left-0 right-0 h-4 bg-boat-wood/70 transition-all duration-200"
+          style={{
+            transform: `rotate(${rotation * 0.08}deg)`,
+          }}
+        />
+        {/* Boat railing */}
+        <div 
+          className="absolute bottom-3 left-4 right-4 h-1 bg-boat-wood/80 rounded-full"
           style={{
             transform: `rotate(${rotation * 0.05}deg)`,
           }}

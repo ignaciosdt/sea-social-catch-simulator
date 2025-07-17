@@ -43,31 +43,39 @@ export const FishingSimulator = () => {
 
   const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
 
-  const handleMove = useCallback((direction: 'up' | 'down' | 'left' | 'right' | 'dive' | 'surface') => {
+  const handleMove = useCallback((direction: 'forward' | 'backward' | 'left' | 'right' | 'dive' | 'surface') => {
     if (gameState.isFishing || gameState.fuel <= 0) return;
 
     setGameState(prev => {
       let newRotation = prev.rotation;
       let newPosition = { ...prev.position };
       let newDepth = prev.depth;
-      const moveSpeed = 5;
-      const rotationSpeed = 8;
+      const moveSpeed = 3;
+      const rotationSpeed = 2;
       
       switch (direction) {
         case 'left':
-          newRotation = Math.max(-60, newRotation - rotationSpeed);
+          // Strafe left relative to current rotation
+          const strafeLeftX = Math.cos(newRotation * Math.PI / 180) * moveSpeed;
+          const strafeLeftY = Math.sin(newRotation * Math.PI / 180) * moveSpeed;
+          newPosition.x -= strafeLeftX;
+          newPosition.y -= strafeLeftY;
           break;
         case 'right':
-          newRotation = Math.min(60, newRotation + rotationSpeed);
+          // Strafe right relative to current rotation
+          const strafeRightX = Math.cos(newRotation * Math.PI / 180) * moveSpeed;
+          const strafeRightY = Math.sin(newRotation * Math.PI / 180) * moveSpeed;
+          newPosition.x += strafeRightX;
+          newPosition.y += strafeRightY;
           break;
-        case 'up':
+        case 'forward':
           // Move forward based on current rotation
           const forwardX = Math.sin(newRotation * Math.PI / 180) * moveSpeed;
           const forwardY = Math.cos(newRotation * Math.PI / 180) * moveSpeed;
           newPosition.x += forwardX;
           newPosition.y -= forwardY;
           break;
-        case 'down':
+        case 'backward':
           // Move backward
           const backwardX = Math.sin(newRotation * Math.PI / 180) * moveSpeed;
           const backwardY = Math.cos(newRotation * Math.PI / 180) * moveSpeed;
@@ -89,7 +97,7 @@ export const FishingSimulator = () => {
         rotation: newRotation,
         position: newPosition,
         depth: newDepth,
-        fuel: Math.max(0, prev.fuel - 0.3),
+        fuel: Math.max(0, prev.fuel - 0.2),
         isMoving: true
       };
     });
@@ -97,8 +105,37 @@ export const FishingSimulator = () => {
     // Reset moving state after animation
     setTimeout(() => {
       setGameState(prev => ({ ...prev, isMoving: false }));
-    }, 200);
+    }, 100);
   }, [gameState.isFishing, gameState.fuel]);
+
+  const handleRotate = useCallback((direction: 'left' | 'right') => {
+    if (gameState.isFishing) return;
+
+    setGameState(prev => {
+      const rotationSpeed = 3;
+      let newRotation = prev.rotation;
+      
+      switch (direction) {
+        case 'left':
+          newRotation = prev.rotation - rotationSpeed;
+          break;
+        case 'right':
+          newRotation = prev.rotation + rotationSpeed;
+          break;
+      }
+
+      return {
+        ...prev,
+        rotation: newRotation,
+        isMoving: true
+      };
+    });
+
+    // Reset moving state after animation
+    setTimeout(() => {
+      setGameState(prev => ({ ...prev, isMoving: false }));
+    }, 100);
+  }, [gameState.isFishing]);
 
   const handleFish = useCallback(() => {
     if (gameState.isFishing) return;
@@ -177,8 +214,8 @@ export const FishingSimulator = () => {
   // Continuous movement based on held keys
   useEffect(() => {
     const moveInterval = setInterval(() => {
-      if (keys['w'] || keys['arrowup']) handleMove('up');
-      if (keys['s'] || keys['arrowdown']) handleMove('down');
+      if (keys['w'] || keys['arrowup']) handleMove('forward');
+      if (keys['s'] || keys['arrowdown']) handleMove('backward');
       if (keys['a'] || keys['arrowleft']) handleMove('left');
       if (keys['d'] || keys['arrowright']) handleMove('right');
       if (keys['q']) handleMove('dive');
@@ -187,6 +224,37 @@ export const FishingSimulator = () => {
 
     return () => clearInterval(moveInterval);
   }, [keys, handleMove]);
+
+  // Mouse rotation (like Minecraft)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (document.pointerLockElement) {
+        const sensitivity = 0.3;
+        const deltaX = e.movementX * sensitivity;
+        
+        setGameState(prev => ({
+          ...prev,
+          rotation: prev.rotation + deltaX
+        }));
+      }
+    };
+
+    const handleClick = () => {
+      if (document.pointerLockElement) {
+        document.exitPointerLock();
+      } else {
+        document.body.requestPointerLock();
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('click', handleClick);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('click', handleClick);
+    };
+  }, []);
 
   // Refuel over time
   useEffect(() => {
